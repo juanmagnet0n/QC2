@@ -1,7 +1,12 @@
+qiskit
+qiskit-aer
+qiskit-algorithms
+qiskit-nature
+qiskit-nature-pyscf
+pyscf
+jupyter
+ipykernel
+matplotlib
 numpy
 scipy
-matplotlib
-jupyter
-qiskit
-qiskit-nature
-pyscf
+pandas
