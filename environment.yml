@@ -1,0 +1,14 @@
+name: quantum-chemistry-on-qubits
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - jupyter
+  - pip
+  - pip:
+      - qiskit
+      - qiskit-nature
+      - pyscf

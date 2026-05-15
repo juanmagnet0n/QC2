@@ -1,0 +1,7 @@
+numpy
+scipy
+matplotlib
+jupyter
+qiskit
+qiskit-nature
+pyscf
