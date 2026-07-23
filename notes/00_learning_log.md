@@ -70,3 +70,58 @@ real UCCSD error growth as static correlation increases, and where active-space
 choices and circuit depth start to matter in a way they don't for H2/STO-3G.
 See also `notes/fermion_to_qubit_mapping.md` for concrete Jordan-Wigner
 qubit/Pauli-term counts from this system.
+
+## 2026-07-20 — H2/STO-3G VQE: first end-to-end run
+
+**What I did**
+
+Got `01_h2_vqe_qiskit_nature` running end-to-end: H2 in STO-3G (4 spin
+orbitals → 4 qubits), Jordan-Wigner mapping, HF + UCCSD ansatz (3
+parameters), noiseless statevector simulation optimized with SciPy
+SLSQP. VQE energy agrees with exact diagonalization to ~4e-14 Hartree.
+
+**What I actually learned, not just what ran**
+
+- Jordan-Wigner is bookkeeping, not physics. The physics (which spin
+  orbitals are occupied, and the fermionic sign structure that keeps
+  the wavefunction antisymmetric) doesn't change. JW just re-expresses
+  that structure in a basis of qubit operators, using Z-strings to
+  carry the antisymmetry information that used to live implicitly in
+  how I ordered a Slater determinant.
+- UCCSD on a quantum computer is CCSD's unitary sibling. Classically,
+  CCSD's e^T isn't unitary and that's fine — I never needed it to be,
+  since I'm just building an energy expectation value classically.
+  Quantum gates *must* be unitary, so UCCSD swaps in e^(T−T†). Same
+  cluster operator idea, different constraint driving the choice of
+  exponential.
+- The 4e-14 Ha agreement is not a victory over exact diagonalization —
+  it's confirmation the code is wired correctly. With 2 electrons in 2
+  spatial orbitals, UCCSD's excitation manifold *is* the full FCI
+  space. There's no truncation for it to be inexact about yet. The
+  real test of whether this method is doing anything approximate
+  starts at LiH/H2O (Phase 5).
+- VQE's loop is the classical-quantum handoff I'll need to keep
+  straight going forward: state prep on the quantum side, expectation
+  value measurement on the quantum side, parameter update on the
+  classical side (SLSQP here), repeat. Nothing about the physics
+  changes across that loop — it's a different way of finding the same
+  ground-state energy I'd get from a classical eigensolver, just with
+  the state stored on qubits instead of in a CI vector.
+
+**Where this sits in the bigger picture**
+
+This is the "does the pipeline work" milestone, not the "does the
+approximation hold up" milestone. That's Phase 5's job. Phase 4 (bond
+stretching) is next — same exact-for-this-system caveat applies, but
+it'll be useful for seeing how VQE behaves away from equilibrium
+geometry, and as a warm-up for interpreting energy curves before UCCSD
+stops being exact.
+
+**Open questions carried forward**
+
+- How much of UCCSD's cost (circuit depth, gate count) scales when
+  moving from H2 to LiH — is this something I should benchmark before
+  committing to LiH as the Phase 5 target?
+- At what system size does JW's qubit overhead (relative to more
+  efficient fermion-to-qubit mappings, e.g. Bravyi-Kitaev) start to
+  matter in practice?
