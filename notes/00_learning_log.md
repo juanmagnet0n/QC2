@@ -1,5 +1,62 @@
 # Learning log
 
+## 2026-07-24 — LiH/STO-3G frozen-core energy curve (notebook 03)
+
+**What was built**
+
+`notebooks/03_lih_energy_curve_frozen_core.ipynb` repeats the Phase 4
+bond-stretching pipeline on LiH instead of H2, using
+`FreezeCoreTransformer` to freeze the Li 1s core orbital. This leaves an
+active space of 5 spatial orbitals and 2 electrons (1 alpha, 1 beta) —
+10 qubits under Jordan-Wigner, 276 Pauli terms, a 24-parameter UCCSD
+ansatz. Ran across 11 Li-H distances from 1.0 A to 6.0 A.
+
+**Performance problem and fix**
+
+The first version of this notebook (reusing notebook 02's helper
+unmodified) measured at ~17 seconds per VQE energy evaluation, because
+`Statevector.from_instruction` on the raw UCCSD ansatz's opaque
+excitation gates goes through a generic sparse matrix-exponential path
+(visible as `splu`/`spsolve` warnings). That was fine for H2's 3-parameter
+ansatz but made the 24-parameter LiH case impractical (would have taken
+days). Fix: transpile the bound circuit to a plain gate basis
+(`basis_gates=['u3', 'cx']`) before building the `Statevector`. This
+cut per-evaluation time to ~0.33s (~50x), with identical results —
+confirmed by benchmarking outside the running kernel before rewriting.
+Also relaxed SLSQP's `ftol` from 1e-12 to 1e-10, since the tighter value
+wasn't needed at this problem's actual error scale and only bought more
+iterations.
+
+**What was learned**
+
+- Freezing the core to 2 active electrons made UCCSD exact again, same
+  as H2/STO-3G but for a different structural reason: with only 2
+  electrons, singles and doubles are the *only* excitations that can
+  exist (there's no such thing as a triple or quadruple excitation
+  with 2 electrons to redistribute), regardless of how many virtual
+  orbitals (5, here) are available. Abs. error stayed at
+  floating-point round-off (~1e-10 to 1e-13 Ha) across 10 of the 11
+  bond distances. This directly confirms the open question from
+  `notes/uccsd_classical_vs_quantum.md`: frozen-core LiH can be exact
+  for the wrong reason, independent of active-space orbital count.
+- One point broke that pattern: at 6.0 A (near dissociation), abs.
+  error jumped to 5.98e-6 Ha and needed 1080 function evaluations
+  (vs. ~225-525 at every other point) despite `optimizer_success=True`.
+  Read as SLSQP struggling to converge on a harder, flatter landscape
+  near dissociation, not a change in UCCSD's expressiveness — the
+  2-electron exactness argument is geometry-independent, so this is an
+  optimizer artifact worth watching for, not evidence of a real
+  approximation gap.
+
+**Next step**
+
+To actually see UCCSD deviate from full CI, the active space needs at
+least 3-4 active electrons — e.g. LiH without freezing the core (4
+active electrons, 6 spatial orbitals, 12 qubits), or a different
+molecule/basis that leaves 4+ electrons active after freezing. That's
+still Phase 5's real test; this notebook establishes the working
+pipeline and the performance fix needed to run it in reasonable time.
+
 ## 2026-07-21 — H2/STO-3G bond-stretching energy curve (notebook 02)
 
 **What was built**
